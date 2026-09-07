@@ -9,14 +9,11 @@ local Config = require(ReplicatedStorage.Shared.Config.Configuration)
 
 -- // Folders //
 local SharedFolder = ReplicatedStorage.Shared
-local ClientObjectScripts = SharedFolder.ClientObjects
-local ServerObjectScripts = SharedFolder.ServerObjects
 local ReplicatedLibrary = SharedFolder.SharedLibrary
-
-local InteractableObjects = Workspace:FindFirstChild(Config.MainFolderName)
-local ClientObjects = InteractableObjects:FindFirstChild("ClientObjects")
-local ServerObjects = InteractableObjects:FindFirstChild("ServerObjects")
 -- // Folders //
 
 -- // Modules //
+local ObjectsLoader = require(ReplicatedLibrary.ObjectsLoader)
 -- // Modules //
+
+ObjectsLoader:RunAllClient()

@@ -16,72 +16,47 @@ local SharedFolder = ReplicatedStorage.Shared
 local ClientObjectScripts = SharedFolder.ClientObjects
 local ServerObjectScripts = SharedFolder.ServerObjects
 
-local ClientObjects = InteractableObjects:FindFirstChild("ClientObjects")
-local ServerObjects = InteractableObjects:FindFirstChild("ServerObjects")
+local ClientObjects = InteractableObjects:WaitForChild("ClientObjects")
+local ServerObjects = InteractableObjects:WaitForChild("ServerObjects")
 -- // Folders //
 
-local ObjectsLoader = {}
-
--- Loads and saves all the objects in the given folder in the props of this class.
-function ObjectsLoader:Init(folder: Folder)
-
-    for i, Instance: Instance in folder:GetChildren() do
-
-        if not table.find(self.KnownObjects, Instance) then
-
-            table.insert(self.KnownObjects, Instance) -- Save the known/scanned objects
-            self.ObjectProps[Instance] = Instance:GetChildren()
-
-        end
-
-    end
-
-    ObjectsLoader:PropertyHandler()
-
-end
-
--- Runs all objects stored in this class.
-function ObjectsLoader:PropertyHandler()
-
-    for i, Instance in self.KnownObjects do 
-        for j, Props in self.ObjectProps[Instance] do 
-            for l, Property in Props do 
-                
-                local Values = {}
-
-
-                if Property:IsA("ValueBase") then 
-                    table.insert(Values, Property)
-                    self.PropsValues[Instance] = Values
-                end
-
-            end
-        end
-    end
-end
+local ObjectsLoader = {
+    StartedObjects = {},
+}
 
 -- Runs the scripts in the folder
-local function RunScripts(self, scriptfolder: Folder, objectsfolder: Folder)
+local function RunScripts(self, scriptfolder: Folder, objectsfolder: Folder, newObject: Instance?)
+
     for i, script: ModuleScript in scriptfolder:GetChildren() do 
 
         local ScriptName: string = script.Name
         local Matches = {}
 
-        for j, object: Instance in objectsfolder:GetChildren() do 
+        local objects = if newObject then { newObject } else objectsfolder:GetDescendants()
+
+        for j, object: Instance in objects do
             if object.Name == ScriptName then 
                 table.insert(Matches, object)
             end
         end
 
+        local module = require(script)
+
         if scriptfolder.Name == "ClientObjects" then 
             for i, Obj in Matches do 
-                script.client(Obj, self.PropsValues[Obj])
+                if not self.StartedObjects[Obj] then
+                    self.StartedObjects[Obj] = true
+                    task.spawn(module.Client, Obj)
+                end
             end
         end
 
         if scriptfolder.Name == "ServerObjects" then 
             for i, Obj in Matches do 
-                script.server(Obj, self.PropsValues[Obj])
+                if not self.StartedObjects[Obj] then
+                    self.StartedObjects[Obj] = true
+                    task.spawn(module.Server, Obj)
+                end
             end 
         end
 
@@ -89,11 +64,23 @@ local function RunScripts(self, scriptfolder: Folder, objectsfolder: Folder)
 end
 
 function ObjectsLoader:RunAllClient()
-    RunScripts(ClientObjectScripts, ClientObjects)
+    if self.ClientConnection then return end
+
+    self.ClientConnection = ClientObjects.DescendantAdded:Connect(function(object)
+        RunScripts(self, ClientObjectScripts, ClientObjects, object)
+    end)
+
+    RunScripts(self, ClientObjectScripts, ClientObjects)
 end
 
-function ObjectsLoader:RunAllServer() 
-    RunScripts(ServerObjectScripts, ServerObjects)
+function ObjectsLoader:RunAllServer()
+    if self.ServerConnection then return end
+
+    self.ServerConnection = ServerObjects.DescendantAdded:Connect(function(object)
+        RunScripts(self, ServerObjectScripts, ServerObjects, object)
+    end)
+
+    RunScripts(self, ServerObjectScripts, ServerObjects)
 end
 
 return ObjectsLoader
