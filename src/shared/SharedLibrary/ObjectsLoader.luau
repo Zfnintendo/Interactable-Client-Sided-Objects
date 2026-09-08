@@ -20,6 +20,7 @@ local ClientObjects = InteractableObjects:WaitForChild("ClientObjects")
 local ServerObjects = InteractableObjects:WaitForChild("ServerObjects")
 -- // Folders //
 
+-- // Functions //
 local ObjectsLoader = {
     StartedObjects = {},
 }
@@ -84,3 +85,4 @@ function ObjectsLoader:RunAllServer()
 end
 
 return ObjectsLoader
+-- // Functions
